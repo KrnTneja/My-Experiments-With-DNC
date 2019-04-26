@@ -47,7 +47,7 @@ def construct_example(n, bits = 6):
     return edges, query, shortest_paths, length_of_shortest_path
 
 
-def generate_data(batch_size, bits = 6, cuda = -1):
+def generate_data(batch_size, bits=6, cuda =-1):
     n = np.random.randint(10,25+1)
     sample_edges = []
     sample_queries = []
@@ -78,6 +78,7 @@ def generate_data(batch_size, bits = 6, cuda = -1):
     input_data[:,m+2,-1] = 1
 
     def target_output(actual_output):
+        actual_output = actual_output.cpu().detach().numpy()
         target_array = np.zeros((batch_size, length, size), dtype=np.float32)
         for i in range(batch_size):
             # find closest target output

@@ -24,7 +24,7 @@ def expand_shortest_path(p):
 def construct_example(n, q, bits = 6):
     done = False
 
-    m = int(np.ceil(n*np.log(n)/2))
+    m = int(np.ceil(n*np.log(n)/4))
     G = nx.gnm_random_graph(n,m)
     edges = np.array(G.edges())
     # print("edges",edges)
@@ -76,7 +76,7 @@ def generate_data(batch_size, bits = 6, cuda = -1):
         target_data[i, m+1+q+1:m+1+q+1+q, 0] = sample_connected[i]
 
     input_data[:,m,-2] = 1
-    input_data[:,m+2,-1] = 1
+    input_data[:,m+1+q,-1] = 1
     target_data[:,-1,-1] = 1
         
     input_data = T.from_numpy(input_data)
