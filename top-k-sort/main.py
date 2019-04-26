@@ -5,6 +5,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 import numpy as np
+import matplotlib.pyplot as plt
 import getopt
 import sys
 import os
@@ -36,14 +37,16 @@ parser.add_argument('-lr', type=float, default=1e-4, help='initial learning rate
 parser.add_argument('-optim', type=str, default='adam', help='learning rule, supports adam|rmsprop')
 parser.add_argument('-clip', type=float, default=50, help='gradient clipping')
 
-parser.add_argument('-batch_size', type=int, default=100, metavar='N', help='batch size')
+parser.add_argument('-batch_size', type=int, default=1, metavar='N', help='batch size')
 parser.add_argument('-mem_size', type=int, default=20, help='memory dimension')
 parser.add_argument('-mem_slot', type=int, default=128, help='number of memory slots')
 parser.add_argument('-read_heads', type=int, default=4, help='number of read heads')
 
 parser.add_argument('-cuda', type=int, default=0, help='Cuda GPU ID, -1 for CPU')
+parser.add_argument('-debug', action='store_true', help='plot memory content')
 
-parser.add_argument('-iterations', type=int, default=100000, metavar='N', help='total number of iteration')
+parser.add_argument('-iterations', type=int, default=0, metavar='N', help='total number of iteration')
+parser.add_argument('-test_iterations', type=int, default=10, metavar='N', help='total number of iteration')
 parser.add_argument('-summarize_freq', type=int, default=5, metavar='N', help='summarize frequency')
 parser.add_argument('-check_freq', type=int, default=50, metavar='N', help='check point frequency')
 
@@ -65,6 +68,27 @@ def criterion(predictions, targets):
     return T.mean(
             -1 * F.logsigmoid(predictions) * (targets) - T.log(1 - F.sigmoid(predictions) + 1e-9) * (1 - targets)
     )
+
+def image_show(img, title=None):
+    import matplotlib.pyplot as plt
+    plt.imshow(img.cpu().detach().numpy())
+    if title is not None: plt.title(title)
+    plt.show()
+
+def show_example(input_data, target_data, output_data):
+    print(output_data.shape)
+    fig = plt.figure()
+    ax1 = fig.add_subplot(311)
+    ax2 = fig.add_subplot(312)
+    ax3 = fig.add_subplot(313)
+    ax1.set_title("Input Data")
+    ax2.set_title("Target Data")
+    ax3.set_title("Output Data")
+    ax1.imshow(input_data[0].cpu().detach().numpy().T)
+    ax2.imshow(target_data[0].cpu().detach().numpy().T)
+    ax3.imshow(output_data[0].cpu().detach().numpy().T)
+
+    plt.show()
 
 if __name__ == '__main__':
 
@@ -93,13 +117,14 @@ if __name__ == '__main__':
         cell_size=mem_size,
         read_heads=read_heads,
         gpu_id=args.cuda,
-        debug=False,
+        debug=args.debug,
         batch_first=True,
         independent_linears=True
     )
     check_ptr = os.path.join(ckpts_dir, 'best.pth')
     if os.path.isfile(check_ptr):
         rnn.load_state_dict(T.load(check_ptr))
+        print("Model loaded.")
 
     print(rnn)
 
@@ -154,14 +179,16 @@ if __name__ == '__main__':
             T.save(cur_weights, check_ptr)
             llprint("Done!\n")
 
-    for i in range(int((iterations + 1) / 10)):
-        llprint("\nIteration %d/%d" % (i, iterations))
+    for i in range(int((args.test_iterations + 1) / 10)):
+        llprint("\nIteration %d/%d" % (i, args.test_iterations))
         input_data, target_output = dataset.generate_data(1, args.bits, args.cuda)
 
-        if rnn.debug:
+        if args.debug:
             output, (chx, mhx, rv), v = rnn(input_data, (None, mhx, None), reset_experience=True, pass_through_memory=True)
         else:
             output, (chx, mhx, rv) = rnn(input_data, (None, mhx, None), reset_experience=True, pass_through_memory=True)
+
+        show_example(input_data, target_output, F.sigmoid(output))
 
         output = output[:, -1, :].sum().data.cpu().numpy()[0]
         target_output = target_output.sum().data.cpu().numpy()
