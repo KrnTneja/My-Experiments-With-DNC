@@ -10,8 +10,8 @@ def get_bit_sequence(x, bits=7):
         bit_seq[i,:] = [float(bi) for bi in "{:0{bits}b}".format(x[i],bits=bits)]
     return bit_seq
 
-def get_distance(matrix,path):
-    output = 0;
+def get_distance(matrix,path,n):
+    output = matrix[n-1][path[0]] + matrix[n-1][path[n-2]];
     for index in range(1,len(path)):
         output += matrix[path[index-1]][path[index]]
     return output
@@ -22,12 +22,12 @@ def get_example(N, bits=7):
     dist_matrix = np.floor_divide(dist_matrix + dist_matrix.transpose(),2)
     np.fill_diagonal(dist_matrix,0)
     
-    all_paths = itertools.permutations(range(N))
+    all_paths = itertools.permutations(range(N-1))
     curr_min = float('inf')
     curr_path = []
 
     for path in all_paths:
-        dist = get_distance(dist_matrix,path)
+        dist = get_distance(dist_matrix,path,N)
         if(dist < curr_min):
             curr_min = dist
             curr_path = path
@@ -38,7 +38,7 @@ def generate_data(batch_size, bits=7, cuda=-1):
     
 
     for i in range(batch_size):
-        M,path = get_example(10)
+        M,path = get_example(4)
         print(M,path)
 
 generate_data(1)
